@@ -1,45 +1,57 @@
-# Fahhhhify Pulse (VS Code Extension)
+<div align="center">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Bushwick_Brooklyn_Art_448.jpg" alt="Fahhhhify Pulse icon" width="128" />
+  <h1>Fahhhhify Pulse</h1>
+  <p><strong>Code error? Instant FAHHH energy.</strong></p>
+</div>
 
-This extension plays a viral "Fahhh" sound whenever code diagnostics report new errors.
+If you are on that short-form coding content side of the internet, you have probably heard the dramatic "fahhh" reaction sound. This extension brings that same vibe into VS Code.
 
-## Features
+When your error count goes up, it plays the bundled Fahhh audio so you get immediate feedback (and a little roast).
 
-- Listens to VS Code diagnostics and detects `Error` severity.
-- Plays the bundled `Fahhhhify-Pulse.mp3` sound when error count increases.
-- Works across desktop environments where VS Code runs (Windows, Linux, macOS) using native OS audio playback (no extra webview tab).
-- Includes a manual test command: `Fahhh?`.
-- Includes commands for quick verification:
-  - `Fahhh!Fahhh!!Fahhh!!!`
-  - `Fahhh Status`
+## Why this exists
+
+- Fast feedback when new errors appear
+- Meme energy while debugging
+- Works across macOS, Windows, and Linux
+- No extra popup/webview required
+
+## Command Palette commands
+
+- `Fahhh?`
+- `Fahhh!Fahhh!!Fahhh!!!`
+- `Fahhh Status`
 
 ## Settings
 
-- `faahSound.enabled`: enable/disable sound.
-- `faahSound.volume`: sound volume from `0` to `1`.
-- `faahSound.cooldownMs`: minimum time between sounds.
-- `faahSound.playOnlyOnIncrease`: only trigger when total errors increase.
+- `faahSound.enabled`
+- `faahSound.volume`
+- `faahSound.cooldownMs`
+- `faahSound.playOnlyOnIncrease`
 
-## Run Locally
-
-1. Open this folder in VS Code.
-2. Run `npm install`.
-3. Press `F5` (Run `Run Faah Extension`) to open Extension Development Host.
-4. Run `Fahhh?` to confirm audio output.
-5. In the new window, create a file with an intentional error.
-
-## Build VSIX
+## Install / Test
 
 ```bash
 npm install
 npm run package
 ```
 
-Then install the generated `.vsix` file in VS Code.
+Then in VS Code:
 
-## Notes
+1. `Extensions: Install from VSIX...`
+2. Select `fahhhhify-pulse-0.1.1.vsix`
+3. `Developer: Reload Window`
+4. Run `Fahhh?`
 
-- No additional VS Code tab/window is required for playback.
-- Linux may require one of: `ffplay`, `mpv`, `mpg123`, `cvlc`, or `play` (SoX).
-- Sound asset source repo: [radhika0910/Fahhhh--VSCode-extension](https://github.com/radhika0910/Fahhhh--VSCode-extension).
+## Platform playback
+
+- macOS: `afplay`
+- Windows: PowerShell MediaPlayer
+- Linux: `ffplay`, `mpv`, `mpg123`, `cvlc`, or `play`
+
+## Credits & Reference
+
+- Sound trend inspiration reference: [radhika0910/Fahhhh--VSCode-extension](https://github.com/radhika0910/Fahhhh--VSCode-extension)
+- Developer: **A1one4ever**
+- Icon source (web reference image): [Wikimedia Commons - Bushwick Brooklyn Art 448](https://commons.wikimedia.org/wiki/File:Bushwick_Brooklyn_Art_448.jpg) by `Kidfly182`, licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 
 Enjoy Madam
