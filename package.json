@@ -1,0 +1,73 @@
+{
+  "name": "fahhhhify-pulse",
+  "displayName": "Fahhhhify Pulse",
+  "description": "Plays viral Fahhh sound when code errors appear.",
+  "version": "0.1.0",
+  "publisher": "devharry",
+  "author": "Dev Harry",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:faahSound.playNow",
+    "onCommand:faahSound.testBurst",
+    "onCommand:faahSound.showStatus"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "faahSound.playNow",
+        "title": "Fahhh?"
+      },
+      {
+        "command": "faahSound.testBurst",
+        "title": "Fahhh!Fahhh!!Fahhh!!!"
+      },
+      {
+        "command": "faahSound.showStatus",
+        "title": "Fahhh Status"
+      }
+    ],
+    "configuration": {
+      "title": "Faah Error Sound",
+      "properties": {
+        "faahSound.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable faah sounds for diagnostics errors."
+        },
+        "faahSound.volume": {
+          "type": "number",
+          "default": 0.9,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Volume of the faah sound (0.0 to 1.0)."
+        },
+        "faahSound.cooldownMs": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 0,
+          "description": "Minimum time between sounds in milliseconds."
+        },
+        "faahSound.playOnlyOnIncrease": {
+          "type": "boolean",
+          "default": true,
+          "description": "Play sound only when total error count increases."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "echo \"No lint configured\"",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.2"
+  }
+}
