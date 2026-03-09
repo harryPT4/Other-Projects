@@ -1,5 +1,6 @@
 const vscode = require('vscode');
 const path = require('path');
+const fs = require('fs/promises');
 const { execFile } = require('child_process');
 
 class FaahSoundController {
@@ -9,6 +10,7 @@ class FaahSoundController {
     this.previousErrorCount = 0;
     this.initialized = false;
     this.soundFilePath = context.asAbsolutePath('Fahhhhify-Pulse.mp3');
+    this.fallbackWavPath = path.join(context.globalStorageUri.fsPath, 'fahhh-fallback.wav');
   }
 
   async activate() {
@@ -113,11 +115,22 @@ class FaahSoundController {
       return;
     }
 
-    const ok = await playNativeSound(this.soundFilePath, cfg.volume);
+    await this.ensureFallbackWav();
+    const ok = await playNativeSound(this.soundFilePath, cfg.volume, this.fallbackWavPath);
     if (!ok) {
       vscode.window.showWarningMessage(
-        'Fahhhhify Pulse: no supported MP3 player found. Run "Fahhh Status" for backend info.'
+        'Fahhhhify Pulse: no supported audio backend found. Run "Fahhh Status" for backend info.'
       );
+    }
+  }
+
+  async ensureFallbackWav() {
+    try {
+      await fs.mkdir(this.context.globalStorageUri.fsPath, { recursive: true });
+      await fs.access(this.fallbackWavPath);
+    } catch {
+      const wav = generateFaahWavBuffer();
+      await fs.writeFile(this.fallbackWavPath, wav);
     }
   }
 }
@@ -146,7 +159,7 @@ function commandExists(command) {
   return runCommand(probe, [command]);
 }
 
-async function playNativeSound(filePath, volume) {
+async function playNativeSound(filePath, volume, wavFallbackPath) {
   if (process.platform === 'darwin') {
     return runCommand('afplay', [filePath]);
   }
@@ -192,6 +205,15 @@ async function playNativeSound(filePath, volume) {
     if (await commandExists('play')) {
       return runCommand('play', ['-q', filePath]);
     }
+    if (wavFallbackPath && await commandExists('paplay')) {
+      return runCommand('paplay', [wavFallbackPath]);
+    }
+    if (wavFallbackPath && await commandExists('aplay')) {
+      return runCommand('aplay', ['-q', wavFallbackPath]);
+    }
+    if (wavFallbackPath && await commandExists('canberra-gtk-play')) {
+      return runCommand('canberra-gtk-play', ['-f', wavFallbackPath]);
+    }
 
     return false;
   }
@@ -209,13 +231,13 @@ async function describeBackend() {
   }
 
   if (process.platform === 'linux') {
-    const candidates = ['ffplay', 'mpv', 'mpg123', 'cvlc', 'play'];
+    const candidates = ['ffplay', 'mpv', 'mpg123', 'cvlc', 'play', 'paplay', 'aplay', 'canberra-gtk-play'];
     for (const cmd of candidates) {
       if (await commandExists(cmd)) {
         return `Linux: ${cmd}`;
       }
     }
-    return 'Linux: none found (need ffplay/mpv/mpg123/cvlc/play)';
+    return 'Linux: none found (need ffplay/mpv/mpg123/cvlc/play/paplay/aplay)';
   }
 
   return process.platform;
@@ -228,6 +250,54 @@ function activate(context) {
 
 function deactivate() {
   // no-op
+}
+
+function generateFaahWavBuffer() {
+  const sampleRate = 44100;
+  const durationSec = 0.62;
+  const numSamples = Math.floor(sampleRate * durationSec);
+  const pcmData = Buffer.alloc(numSamples * 2);
+
+  for (let i = 0; i < numSamples; i += 1) {
+    const t = i / sampleRate;
+    const progress = i / numSamples;
+    const baseFreq = 220 - (45 * progress);
+    const harmonics =
+      Math.sin(2 * Math.PI * baseFreq * t)
+      + 0.6 * Math.sin(2 * Math.PI * (baseFreq * 2) * t)
+      + 0.3 * Math.sin(2 * Math.PI * (baseFreq * 3) * t);
+    const attack = Math.min(1, t / 0.03);
+    const release = Math.max(0, 1 - (t / durationSec));
+    const envelope = Math.pow(attack * release, 0.8);
+    const sample = Math.max(-1, Math.min(1, 0.38 * harmonics * envelope));
+    pcmData.writeInt16LE(Math.round(sample * 32767), i * 2);
+  }
+
+  return encodeWav(pcmData, sampleRate, 1, 16);
+}
+
+function encodeWav(pcmData, sampleRate, channels, bitsPerSample) {
+  const blockAlign = (channels * bitsPerSample) / 8;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = pcmData.length;
+  const wav = Buffer.alloc(44 + dataSize);
+
+  wav.write('RIFF', 0, 'ascii');
+  wav.writeUInt32LE(36 + dataSize, 4);
+  wav.write('WAVE', 8, 'ascii');
+  wav.write('fmt ', 12, 'ascii');
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(channels, 22);
+  wav.writeUInt32LE(sampleRate, 24);
+  wav.writeUInt32LE(byteRate, 28);
+  wav.writeUInt16LE(blockAlign, 32);
+  wav.writeUInt16LE(bitsPerSample, 34);
+  wav.write('data', 36, 'ascii');
+  wav.writeUInt32LE(dataSize, 40);
+  pcmData.copy(wav, 44);
+
+  return wav;
 }
 
 module.exports = {
