@@ -18,19 +18,23 @@ class FaahSoundController {
     this.initialized = true;
 
     const diagnosticsDisposable = vscode.languages.onDidChangeDiagnostics(() => {
-      this.evaluateAndPlay();
+      void this.evaluateAndPlay().catch((error) => {
+        this.handleError('diagnostics playback', error);
+      });
     });
 
     const commandDisposable = vscode.commands.registerCommand('faahSound.playNow', async () => {
-      await this.playSound();
+      await this.safeRun('play test sound', () => this.playSound());
       vscode.window.showInformationMessage('Fahhh? triggered (using Fahhhhify-Pulse.mp3).');
     });
 
     const burstCommandDisposable = vscode.commands.registerCommand('faahSound.testBurst', async () => {
-      for (let i = 0; i < 3; i += 1) {
-        await this.playSound();
-        await sleep(350);
-      }
+      await this.safeRun('play burst sound', async () => {
+        for (let i = 0; i < 3; i += 1) {
+          await this.playSound();
+          await sleep(350);
+        }
+      });
       vscode.window.showInformationMessage('Fahhh!Fahhh!!Fahhh!!! triggered.');
     });
 
@@ -53,10 +57,11 @@ class FaahSoundController {
 
   getConfig() {
     const cfg = vscode.workspace.getConfiguration('faahSound');
+    const cooldown = Number(cfg.get('cooldownMs', 1500));
     return {
       enabled: cfg.get('enabled', true),
       volume: clamp(cfg.get('volume', 0.9), 0, 1),
-      cooldownMs: Math.max(0, cfg.get('cooldownMs', 1500)),
+      cooldownMs: Number.isFinite(cooldown) ? Math.max(0, cooldown) : 1500,
       playOnlyOnIncrease: cfg.get('playOnlyOnIncrease', true)
     };
   }
@@ -115,12 +120,16 @@ class FaahSoundController {
       return;
     }
 
-    await this.ensureFallbackWav();
-    const ok = await playNativeSound(this.soundFilePath, cfg.volume, this.fallbackWavPath);
-    if (!ok) {
-      vscode.window.showWarningMessage(
-        'Fahhhhify Pulse: no supported audio backend found. Run "Fahhh Status" for backend info.'
-      );
+    try {
+      await this.ensureFallbackWav();
+      const ok = await playNativeSound(this.soundFilePath, cfg.volume, this.fallbackWavPath);
+      if (!ok) {
+        vscode.window.showWarningMessage(
+          'Fahhhhify Pulse: no supported audio backend found. Run "Fahhh Status" for backend info.'
+        );
+      }
+    } catch (error) {
+      this.handleError('audio playback', error);
     }
   }
 
@@ -132,6 +141,20 @@ class FaahSoundController {
       const wav = generateFaahWavBuffer();
       await fs.writeFile(this.fallbackWavPath, wav);
     }
+  }
+
+  async safeRun(action, fn) {
+    try {
+      await fn();
+    } catch (error) {
+      this.handleError(action, error);
+    }
+  }
+
+  handleError(action, error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Fahhhhify Pulse] ${action} failed:`, error);
+    vscode.window.setStatusBarMessage(`Fahhhhify Pulse: ${action} failed (${message})`, 5000);
   }
 }
 
@@ -245,7 +268,11 @@ async function describeBackend() {
 
 function activate(context) {
   const controller = new FaahSoundController(context);
-  controller.activate();
+  void controller.activate().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Fahhhhify Pulse] activation failed:', error);
+    vscode.window.showErrorMessage(`Fahhhhify Pulse activation failed: ${message}`);
+  });
 }
 
 function deactivate() {
